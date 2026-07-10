@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "skills": {
+    "extract-listings": {
+      "source": "/Users/shubhankar/.config/browserbase/skills/zillow.com/extract-listings-zw43tv",
+      "sourceType": "local",
+      "computedHash": "aa95865be75ae08931ee9cd826f6d48183ff8ac8462ab426c99758f193cae11d"
+    },
+    "search-listings": {
+      "source": "/Users/shubhankar/.config/browserbase/skills/craigslist.org/search-listings-hw5qri",
+      "sourceType": "local",
+      "computedHash": "f03be2c8f14e84b3febe60dd774c80f57751f0cd935b8518d0b2a1d5e1bfe417"
+    },
+    "search-rentals": {
+      "source": "/Users/shubhankar/.config/browserbase/skills/apartments.com/search-rentals-33icwz",
+      "sourceType": "local",
+      "computedHash": "0866124dd25f6f86d88523fc8f9d9fc8ba47d967e0fc65833d68598e628c78f2"
+    }
+  }
+}

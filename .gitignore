@@ -1,0 +1,21 @@
+# secrets — never commit
+.env
+.env.local
+
+# dependencies
+node_modules/
+
+# mastra build output
+.mastra/
+
+# local databases (LibSQL / DuckDB)
+*.db
+*.db-shm
+*.db-wal
+*.duckdb
+*.duckdb.wal
+*.wal
+
+# traces / screenshots / scratch
+*.redacted.json
+screenshot-*.png

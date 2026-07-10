@@ -1,0 +1,24 @@
+{
+  "name": "mastra-browse-demo",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "concierge": "tsx src/run.ts",
+    "ui": "tsx src/server.ts",
+    "dev": "mastra dev",
+    "build": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@mastra/core": "^1.45.0",
+    "@mastra/duckdb": "^1.5.0",
+    "@mastra/libsql": "^1.14.0",
+    "@mastra/memory": "^1.22.2",
+    "@mastra/observability": "^1.15.0",
+    "tsx": "^4.22.4",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "mastra": "^1.15.0"
+  }
+}

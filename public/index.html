@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>relocate.ai · your move, handled</title>
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1"></script>
+<style>
+  :root {
+    --ink: #1c1917;
+    --muted: #78716c;
+    --paper: #faf7f2;
+    --card: #ffffff;
+    --accent: #c2410c;
+    --accent-soft: #ffedd5;
+    --ok: #15803d;
+    --line: #e7e2da;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    font-family: "Avenir Next", "Segoe UI", system-ui, sans-serif;
+    background: var(--paper); color: var(--ink);
+    min-height: 100vh;
+  }
+  header {
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 32px; border-bottom: 1px solid var(--line);
+  }
+  header .logo { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; flex: none; }
+  header .logo em { color: var(--accent); font-style: normal; }
+  header .tag { color: var(--muted); font-size: 13px; margin-left: auto; flex: none; }
+  .nav { display: flex; gap: 4px; margin-left: 24px; }
+  .navtab { font-size: 14px; color: var(--muted); padding: 6px 14px; border-radius: 8px; cursor: pointer; white-space: nowrap; }
+  .navtab:hover { background: #f1ece5; }
+  .navtab.active { background: var(--ink); color: #fff; }
+  main { max-width: 1440px; margin: 0 auto; padding: 22px 32px; display: grid; grid-template-columns: 360px 1fr; gap: 20px; align-items: start; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 20px; }
+  .card h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--muted); margin-bottom: 12px; }
+  label { display: block; font-size: 13px; color: var(--muted); margin: 10px 0 4px; }
+  input {
+    width: 100%; padding: 9px 11px; border: 1px solid var(--line); border-radius: 8px;
+    font-size: 14px; background: #fffdf9;
+  }
+  button {
+    margin-top: 16px; width: 100%; padding: 11px; border: 0; border-radius: 8px;
+    background: var(--ink); color: #fff; font-size: 14px; font-weight: 600; cursor: pointer;
+  }
+  button:disabled { opacity: 0.45; cursor: default; }
+  button.approve { background: var(--accent); }
+  button.ghost { background: transparent; color: var(--muted); border: 1px solid var(--line); }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .timeline { list-style: none; margin-top: 4px; }
+  .timeline li { display: flex; gap: 10px; padding: 8px 0; border-bottom: 1px dashed var(--line); font-size: 13.5px; align-items: center; }
+  .timeline li:last-child { border-bottom: 0; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--line); flex: none; }
+  .dot.active { background: var(--accent); animation: pulse 1.2s infinite; }
+  .dot.done { background: var(--ok); }
+  @keyframes pulse { 50% { opacity: 0.35; } }
+  .pick { background: var(--accent-soft); border-radius: 10px; padding: 12px; margin-top: 14px; font-size: 13.5px; display: none; }
+  .pick b { display: block; margin-bottom: 3px; }
+  .pick .why { color: var(--muted); font-size: 12.5px; margin-top: 5px; }
+  .pick ul li { padding: 5px 0; border-bottom: 1px dashed var(--line); }
+  .pick ul .lurl { margin-top: 2px; }
+  .pick ul .lurl a { font-family: ui-monospace, Menlo, monospace; font-size: 10.5px; color: var(--accent); text-decoration: none; }
+  .pick ul .lurl a:hover { text-decoration: underline; }
+  .src { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.6px; border-radius: 4px; padding: 1px 5px; margin-right: 5px; }
+  .src.Craigslist { background: #f3e8ff; color: #7e22ce; }
+  .src.Apartments { background: #dbeafe; color: #1d4ed8; }
+  .confirm { display: none; margin-top: 14px; padding: 13px; border-radius: 10px; background: #dcfce7; color: var(--ok); font-size: 13.5px; }
+  .error { display: none; margin-top: 14px; padding: 13px; border-radius: 10px; background: #fee2e2; color: #b91c1c; font-size: 13.5px; }
+  .approvebox { display: none; margin-top: 14px; padding: 14px; border: 1.5px solid var(--accent); border-radius: 10px; }
+  .approvebox p { font-size: 13.5px; margin-bottom: 4px; }
+  .approvebox .note { color: var(--muted); font-size: 12px; }
+
+  /* right column: each browser is a fixed-height live view + its OWN reasoning feed */
+  .stage { display: flex; flex-direction: column; gap: 16px; }
+  #sessions { display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 16px; align-items: start; }
+  .sess { background: var(--card); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+  .sess .bar { display: flex; align-items: center; gap: 8px; padding: 9px 14px; border-bottom: 1px solid var(--line); font-size: 12.5px; font-weight: 600; }
+  .sess .bar .dot { width: 8px; height: 8px; border-radius: 50%; flex:none; }
+  .sess.craigslist .bar .dot { background:#7e22ce; }
+  .sess.apartments .bar .dot { background:#1d4ed8; }
+  .sess.apply .bar .dot { background:var(--ok); }
+  .sess .bar .state { margin-left: auto; font-weight: 500; font-size: 11px; color: var(--muted); }
+  .sess .bar .state.live { color: #dc2626; }
+  .sess .view { height: 300px; background: #101010; position: relative; }
+  .sess iframe, .sess video { width: 100%; height: 100%; border: 0; display: block; background: #101010; object-fit: contain; }
+  .sess .waiting { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #a8a29e; font-size: 13px; text-align:center; padding:16px; }
+  /* per-session reasoning feed, directly under its live view */
+  .sess .feed { height: 168px; overflow-y: auto; padding: 8px 14px 10px; border-top: 1px solid var(--line); font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 11px; line-height: 1.7; background:#fdfcfa; }
+  .sess .feed .thought { color: #57534e; font-style: italic; }
+  .sess .feed .act { color: #8a807a; }
+  .sess .feed .skill { color: var(--orange); font-weight:700; }
+  #stagePlaceholder { border: 1px dashed var(--line); border-radius: 14px; min-height: 420px; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 14.5px; text-align: center; line-height: 1.8; background: #fffdf9; }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">relocate<em>.ai</em></div>
+  <nav class="nav">
+    <a class="navtab active">Find apartments</a>
+    <a class="navtab">Find a gym</a>
+    <a class="navtab">Find co-working</a>
+    <a class="navtab">Movers</a>
+    <a class="navtab">Utilities</a>
+  </nav>
+  <div class="tag">powered by Browserbase × Mastra</div>
+</header>
+
+<main>
+  <section>
+    <div class="card">
+      <h2>New relocation · Jane</h2>
+      <label>Moving to</label>
+      <input id="city" value="San Francisco, CA" disabled />
+      <div class="row2">
+        <div>
+          <label>Looking for</label>
+          <input id="query" value="1 bedroom" />
+        </div>
+        <div>
+          <label>Max budget / month</label>
+          <input id="budget" value="4500" />
+        </div>
+      </div>
+      <button id="start">Find &amp; apply for my apartment</button>
+
+      <div class="pick" id="shortlistBox" style="background:#fff; border:1px solid var(--line);">
+        <b>Found across Craigslist + Apartments.com</b>
+        <ul id="shortlist" style="list-style:none; font-size:12.5px; margin-top:6px;"></ul>
+      </div>
+
+      <div class="pick" id="pick">
+        <b id="pickTitle"></b>
+        <span id="pickPrice"></span>
+        <div class="why" id="pickWhy"></div>
+      </div>
+
+      <div class="approvebox" id="approvebox">
+        <p id="approveSummary"></p>
+        <p class="note">Submitting shares your application (incl. SSN) with the landlord's portal. Your agent never sees the real values.</p>
+        <button class="approve" id="approve">Approve &amp; submit application</button>
+        <button class="ghost" id="decline">Not this one</button>
+      </div>
+
+      <div class="confirm" id="confirm"></div>
+      <div class="error" id="error"></div>
+    </div>
+
+    <div class="card" style="margin-top: 16px;">
+      <h2>Your agent's progress</h2>
+      <ul class="timeline">
+        <li id="ph-finding"><span class="dot"></span> Browsing Craigslist + Apartments.com in parallel <span id="attempt" style="color:var(--muted)"></span></li>
+        <li id="ph-approval"><span class="dot"></span> Best match found, waiting for your approval</li>
+        <li id="ph-applying"><span class="dot"></span> Applying on the landlord's portal</li>
+        <li id="ph-done"><span class="dot"></span> Application submitted</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="stage">
+    <div id="stagePlaceholder">
+      Your agents work in real cloud browsers, one per site, in parallel.<br />
+      The moment they start, you'll watch every one of them live, right here.
+    </div>
+    <div id="sessions" style="display:none;"></div>
+  </section>
+</main>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  let polling = null;
+  const cards = {};   // label → {el, mode: 'live'|'replay', replayTimer}
+
+
+  $('start').onclick = async () => {
+    $('start').disabled = true;
+    $('error').style.display = 'none';
+    await fetch('/api/start', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ budgetMax: Number($('budget').value), query: $('query').value }),
+    });
+    polling = setInterval(poll, 1200);
+  };
+
+  $('approve').onclick = async () => {
+    $('approve').disabled = true;
+    await fetch('/api/approve', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{"approved":true}' });
+  };
+  $('decline').onclick = async () => {
+    await fetch('/api/approve', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{"approved":false}' });
+  };
+
+  function setDot(id, cls) {
+    const dot = $(id).querySelector('.dot');
+    dot.className = 'dot' + (cls ? ' ' + cls : '');
+  }
+
+  function ensureCard(s) {
+    if (cards[s.label]) return cards[s.label];
+    const el = document.createElement('div');
+    el.className = 'sess ' + s.label;
+    el.innerHTML = `
+      <div class="bar"><span class="dot"></span>${s.title}<span class="state live">● LIVE</span></div>
+      <div class="view"><div class="waiting">connecting…</div></div>
+      <div class="feed"></div>`;
+    $('sessions').appendChild(el);
+    cards[s.label] = { el, mode: null, feedCount: 0 };
+    return cards[s.label];
+  }
+
+  // render this session's own reasoning feed, filtered to its label
+  function renderCardFeed(card, label, events) {
+    const feed = card.el.querySelector('.feed');
+    const mine = events.filter((e) => e.agent === label);
+    for (let i = card.feedCount; i < mine.length; i++) {
+      const e = mine[i];
+      const line = document.createElement('div');
+      let cls = 'act';
+      if (e.text.startsWith('💭')) cls = 'thought';
+      else if (e.text.startsWith('▶')) cls = 'skill';
+      line.className = cls;
+      line.textContent = e.text;
+      feed.appendChild(line);
+    }
+    if (mine.length !== card.feedCount) { card.feedCount = mine.length; feed.scrollTop = feed.scrollHeight; }
+  }
+
+  function showLive(card, s) {
+    if (card.mode === 'live' || card.mode === 'replay') return;
+    if (!s.liveViewUrl) return;
+    card.mode = 'live';
+    const view = card.el.querySelector('.view');
+    view.innerHTML = `<iframe src="${s.liveViewUrl}" allow="clipboard-read; clipboard-write"></iframe>`;
+  }
+
+  function showReplay(card, s) {
+    if (card.mode === 'replay') return;
+    card.mode = 'replay';
+    card.el.querySelector('.state').className = 'state';
+    card.el.querySelector('.state').textContent = 'REPLAY';
+    const view = card.el.querySelector('.view');
+    view.innerHTML = `<div class="waiting">preparing session replay…</div>`;
+    if (!s.sessionId) return;
+
+    // replays become available shortly after the session ends — retry politely
+    let tries = 0;
+    const attempt = async () => {
+      tries++;
+      const head = await fetch('/api/replay/' + s.sessionId);
+      if (head.status !== 200) {
+        if (tries < 30) card.replayTimer = setTimeout(attempt, 5000);
+        else view.innerHTML = `<div class="waiting">replay not available</div>`;
+        return;
+      }
+      const video = document.createElement('video');
+      video.controls = true; video.autoplay = true; video.muted = true;
+      view.innerHTML = '';
+      view.appendChild(video);
+      const src = '/api/replay/' + s.sessionId;
+      if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        video.src = src;
+      } else if (window.Hls && Hls.isSupported()) {
+        const hls = new Hls();
+        hls.loadSource(src);
+        hls.attachMedia(video);
+      } else {
+        view.innerHTML = `<div class="waiting">HLS not supported in this browser</div>`;
+      }
+    };
+    attempt();
+  }
+
+  async function poll() {
+    const s = await (await fetch('/api/state')).json();
+
+    const order = ['finding', 'awaiting-approval', 'applying', 'done'];
+    const ids = { finding: 'ph-finding', 'awaiting-approval': 'ph-approval', applying: 'ph-applying', done: 'ph-done' };
+    const idx = order.indexOf(s.phase);
+    order.forEach((p, i) => setDot(ids[p], idx > i || s.phase === 'done' ? 'done' : idx === i ? 'active' : ''));
+    $('attempt').textContent = s.attempt > 1 ? '(attempt ' + s.attempt + ')' : '';
+
+    if (s.sessions.length) {
+      $('stagePlaceholder').style.display = 'none';
+      $('sessions').style.display = 'grid';
+      for (const sess of s.sessions) {
+        const card = ensureCard(sess);
+        renderCardFeed(card, sess.label, s.events || []);
+        if (sess.status === 'live') showLive(card, sess);
+        else showReplay(card, sess);
+      }
+    }
+
+
+    if (s.shortlist && s.shortlist.length) {
+      $('shortlistBox').style.display = 'block';
+      $('shortlist').innerHTML = s.shortlist
+        .map(function(l){
+          var label = '<span class="src ' + l.source.replace(/\..*/,'') + '">' + l.source + '</span>' +
+            l.title.slice(0, 40) + ' <span style="color:var(--muted)">\u00b7 ' + l.price + '</span>';
+          var link = l.url ? '<div class="lurl"><a href="' + l.url + '" target="_blank" rel="noopener">' +
+            l.url.replace(/^https?:\/\//,'').slice(0,58) + '</a></div>' : '';
+          return '<li>' + label + link + '</li>';
+        })
+        .join('')
+    }
+
+    if (s.chosen) {
+      $('pick').style.display = 'block';
+      $('pickTitle').textContent = s.chosen.title;
+      $('pickPrice').textContent = s.chosen.price + ' / month';
+      $('pickWhy').textContent = s.chosen.reasoning;
+    }
+
+    $('approvebox').style.display = s.phase === 'awaiting-approval' ? 'block' : 'none';
+    if (s.approvalSummary) $('approveSummary').textContent = s.approvalSummary;
+
+    if (s.phase === 'done') {
+      $('confirm').style.display = 'block';
+      $('confirm').textContent = s.submitted
+        ? '✓ Application submitted. ' + (s.confirmation || '')
+        : 'Agent finished but could not confirm submission: ' + (s.confirmation || '');
+      clearInterval(polling);
+      // one more poll pass later so the apply card flips to replay
+      setTimeout(poll, 6000);
+    }
+    if (s.phase === 'error') {
+      $('error').style.display = 'block';
+      $('error').textContent = s.error || 'something went wrong';
+      $('start').disabled = false;
+      clearInterval(polling);
+    }
+    if (s.phase === 'declined') {
+      $('start').disabled = false;
+      $('approvebox').style.display = 'none';
+      clearInterval(polling);
+    }
+  }
+</script>
+</body>
+</html>
