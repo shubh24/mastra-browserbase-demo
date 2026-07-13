@@ -95,6 +95,26 @@ const server = createServer(async (req, res) => {
     return;
   }
 
+  // static assets (logos, images) under public/assets — path-traversal guarded
+  if (req.method === 'GET' && url.pathname.startsWith('/assets/')) {
+    const root = join(__dirname, '..', 'public');
+    const file = join(root, url.pathname.replace(/^\/+/, ''));
+    if (!file.startsWith(root)) return json(res, 403, { error: 'forbidden' });
+    const types: Record<string, string> = {
+      png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg',
+      svg: 'image/svg+xml', gif: 'image/gif', webp: 'image/webp',
+    };
+    try {
+      const buf = readFileSync(file);
+      const ext = file.split('.').pop() ?? '';
+      res.writeHead(200, { 'content-type': types[ext] ?? 'application/octet-stream' });
+      res.end(buf);
+    } catch {
+      json(res, 404, { error: 'not found' });
+    }
+    return;
+  }
+
   if (req.method === 'GET' && url.pathname === '/api/state') {
     return json(res, 200, demoState);
   }

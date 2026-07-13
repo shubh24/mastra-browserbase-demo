@@ -22,14 +22,12 @@
     background: var(--paper); color: var(--ink);
     min-height: 100vh;
   }
-  header {
-    display: flex; align-items: center; gap: 14px;
-    padding: 14px 32px; border-bottom: 1px solid var(--line);
-  }
+  header { border-bottom: 1px solid var(--line); }
+  .hrow { display: flex; align-items: center; gap: 14px; padding: 14px 32px; position: relative; }
   header .logo { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; flex: none; }
   header .logo em { color: var(--accent); font-style: normal; }
-  header .tag { color: var(--muted); font-size: 13px; margin-left: auto; flex: none; }
-  .nav { display: flex; gap: 4px; margin-left: 24px; }
+  .nav { display: flex; gap: 4px; }
+  .subnav { padding: 9px 32px 11px; }
   .navtab { font-size: 14px; color: var(--muted); padding: 6px 14px; border-radius: 8px; cursor: pointer; white-space: nowrap; }
   .navtab:hover { background: #f1ece5; }
   .navtab.active { background: var(--ink); color: #fff; }
@@ -92,19 +90,64 @@
   .sess .feed .act { color: #8a807a; }
   .sess .feed .skill { color: var(--orange); font-weight:700; }
   #stagePlaceholder { border: 1px dashed var(--line); border-radius: 14px; min-height: 420px; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 14.5px; text-align: center; line-height: 1.8; background: #fffdf9; }
+
+  /* header: view toggle + brand lockup */
+  header .headright { margin-left: auto; display: flex; align-items: center; gap: 18px; flex: none; }
+  .viewtoggle { display: flex; background: #f1ece5; border-radius: 10px; padding: 3px; }
+  .viewtoggle .vt { margin: 0; width: auto; padding: 7px 15px; border-radius: 8px; background: transparent; color: var(--muted); font-size: 13px; font-weight: 600; }
+  .viewtoggle .vt.active { background: #fff; color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand-center { position: absolute; left: 50%; transform: translateX(-50%); }
+  .brand .blp { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; font-size: 15px; padding: 6px 14px 6px 6px; border: 1px solid var(--line); border-radius: 999px; background: #fff; }
+  .brand .lgo { width: 24px; height: 24px; border-radius: 6px; display: block; }
+  .brand .bx { color: var(--muted); font-size: 15px; }
+
+  /* co-brand lockup inside the customer panel */
+  .cust-brand { display: inline-flex; align-items: center; gap: 9px; margin-top: 24px; padding: 8px 16px; border: 1px solid var(--line); border-radius: 999px; background: #fff; font-size: 13px; font-weight: 700; }
+  .cust-brand img { width: 20px; height: 20px; border-radius: 5px; display: block; }
+  .cust-brand .pw { color: var(--muted); font-weight: 500; }
+  .cust-brand .bx { color: var(--muted); font-weight: 400; }
+
+  /* minimalist customer view */
+  #customerStage { border: 1px solid var(--line); border-radius: 14px; background: linear-gradient(160deg,#fffdf9,#fff5ec); min-height: 520px; display: flex; align-items: center; justify-content: center; padding: 40px; }
+  .cust-inner { text-align: center; max-width: 460px; }
+  .cust-icon { font-size: 54px; margin-bottom: 18px; }
+  .cust-status { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
+  .cust-sub { color: var(--muted); font-size: 15px; margin-top: 12px; line-height: 1.6; }
+  .cust-steps { display: flex; gap: 8px; justify-content: center; margin-top: 30px; flex-wrap: wrap; }
+  .cstep { font-size: 12px; font-weight: 600; color: var(--muted); background: #fff; border: 1px solid var(--line); border-radius: 999px; padding: 7px 16px; }
+  .cstep.active { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
+  .cstep.done { background: #dcfce7; color: var(--ok); border-color: #bbf7d0; }
+
+  /* mode switching: customer hides the under-the-hood surfaces, and vice versa */
+  body.customer #stagePlaceholder, body.customer #sessions,
+  body.customer #shortlistBox, body.customer #progressCard { display: none !important; }
+  body.hood #customerStage { display: none !important; }
 </style>
 </head>
 <body>
 <header>
-  <div class="logo">relocate<em>.ai</em></div>
-  <nav class="nav">
+  <div class="hrow">
+    <div class="logo">relocate<em>.ai</em></div>
+    <div class="brand brand-center">
+      <span class="blp"><img class="lgo" src="/assets/browserbase-logo.png" alt="Browserbase">Browserbase</span>
+      <span class="bx">×</span>
+      <span class="blp"><img class="lgo" src="/assets/mastra-logo.png" alt="Mastra">Mastra</span>
+    </div>
+    <div class="headright">
+      <div class="viewtoggle">
+        <button class="vt active" data-mode="customer">Customer</button>
+        <button class="vt" data-mode="hood">Under the hood</button>
+      </div>
+    </div>
+  </div>
+  <nav class="nav subnav">
     <a class="navtab active">Find apartments</a>
     <a class="navtab">Find a gym</a>
     <a class="navtab">Find co-working</a>
     <a class="navtab">Movers</a>
     <a class="navtab">Utilities</a>
   </nav>
-  <div class="tag">powered by Browserbase × Mastra</div>
 </header>
 
 <main>
@@ -147,7 +190,7 @@
       <div class="error" id="error"></div>
     </div>
 
-    <div class="card" style="margin-top: 16px;">
+    <div class="card" id="progressCard" style="margin-top: 16px;">
       <h2>Your agent's progress</h2>
       <ul class="timeline">
         <li id="ph-finding"><span class="dot"></span> Browsing Craigslist + Apartments.com in parallel <span id="attempt" style="color:var(--muted)"></span></li>
@@ -159,6 +202,15 @@
   </section>
 
   <section class="stage">
+    <div id="customerStage">
+      <div class="cust-inner">
+        <div class="cust-icon">🏡</div>
+        <div class="cust-status" id="custStatus">Tell us where you're moving.</div>
+        <div class="cust-sub" id="custSub">Your concierge finds the right apartment and applies for you. No spreadsheets, no forms.</div>
+        <div class="cust-steps" id="custSteps"></div>
+        <div class="cust-brand"><span class="pw">powered by</span> <img src="/assets/browserbase-logo.png" alt="">Browserbase <span class="bx">×</span> <img src="/assets/mastra-logo.png" alt="">Mastra</div>
+      </div>
+    </div>
     <div id="stagePlaceholder">
       Your agents work in real cloud browsers, one per site, in parallel.<br />
       The moment they start, you'll watch every one of them live, right here.
@@ -171,6 +223,40 @@
   const $ = (id) => document.getElementById(id);
   let polling = null;
   const cards = {};   // label → {el, mode: 'live'|'replay', replayTimer}
+
+  // view toggle: customer (minimalist) vs under-the-hood (live browsers)
+  document.body.className = 'customer';
+  document.querySelectorAll('.vt').forEach(function (b) {
+    b.onclick = function () {
+      document.querySelectorAll('.vt').forEach((x) => x.classList.remove('active'));
+      b.classList.add('active');
+      document.body.className = b.dataset.mode;
+    };
+  });
+
+  // the end-user's minimalist status panel — no browsers, just where things stand
+  function renderCustomer(s) {
+    const map = {
+      finding: ['Finding your apartment…', 'Searching real listings across the web for you.'],
+      'awaiting-approval': ['Found the one. Your call.', 'Review the match on the left, then approve to apply.'],
+      applying: ['Applying for you…', 'Filling out and submitting the rental application.'],
+      done: [
+        s.submitted ? 'Application submitted 🎉' : 'All done.',
+        s.submitted ? 'You are all set. We will email you when the landlord responds.' : (s.confirmation || ''),
+      ],
+      declined: ['No problem.', 'Start again whenever you are ready.'],
+      error: ['Something went wrong.', s.error || ''],
+    };
+    const m = map[s.phase];
+    if (m) { $('custStatus').textContent = m[0]; $('custSub').textContent = m[1]; }
+    const steps = [['finding', 'Search'], ['awaiting-approval', 'Match'], ['applying', 'Apply'], ['done', 'Done']];
+    const order = ['finding', 'awaiting-approval', 'applying', 'done'];
+    const idx = order.indexOf(s.phase);
+    $('custSteps').innerHTML = steps.map(function (st, i) {
+      const cls = idx > i || s.phase === 'done' ? 'done' : idx === i ? 'active' : '';
+      return '<span class="cstep ' + cls + '">' + st[1] + '</span>';
+    }).join('');
+  }
 
 
   $('start').onclick = async () => {
@@ -274,6 +360,7 @@
 
   async function poll() {
     const s = await (await fetch('/api/state')).json();
+    renderCustomer(s);
 
     const order = ['finding', 'awaiting-approval', 'applying', 'done'];
     const ids = { finding: 'ph-finding', 'awaiting-approval': 'ph-approval', applying: 'ph-applying', done: 'ph-done' };
