@@ -36,19 +36,19 @@ const rule = (t: string) =>
   console.log('\n' + C.orange('━━━ ') + C.bold(t) + C.orange(' ' + '━'.repeat(Math.max(2, 54 - t.length))));
 
 async function main() {
-  // Jane's REAL sensitive data — flows through the durable workflow,
+  // Brandon's REAL sensitive data — flows through the durable workflow,
   // never through a model, never into an exported span.
-  const secrets = { ssn: '123-45-6789', email: 'jane.applicant@example.com', phone: '+1-415-555-0142' };
+  const secrets = { ssn: '123-45-6789', email: 'brandon.barros@example.com', phone: '+1-415-555-0142' };
 
   rule('RELOCATE.AI  ·  powered by Browserbase × Mastra');
-  console.log(C.dim('  customer: Jane — moving to San Francisco, wants a 1BR under $3,000'));
+  console.log(C.dim('  customer: Brandon — moving to San Francisco, wants a 1BR under $3,000'));
 
   const run = await mastra.getWorkflow('relocation-concierge').createRun();
   let res = await run.start({
     inputData: {
       userId: 'u_8842',
       applicant: {
-        name: 'Jane Q. Applicant',
+        name: 'Brandon Barros',
         dob: '4/12/1996',
         currentAddress: '88 King St Apt 4, Seattle, WA 98104',
         ...secrets,

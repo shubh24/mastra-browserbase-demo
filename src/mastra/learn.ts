@@ -124,7 +124,7 @@ export const haikuWorkflow = createWorkflow({
 // ════════════════════════════════════════════════════════════════════════════
 // A step can pause the whole workflow with suspend(). Mastra checkpoints the run
 // to storage — the process can restart, hours can pass — and run.resume() picks
-// up exactly here. This is how the relocation demo waits for Jane's approval.
+// up exactly here. This is how the relocation demo waits for Brandon's approval.
 const draftPost = createStep({
   id: 'draft-post',
   inputSchema: z.object({ topic: z.string() }),

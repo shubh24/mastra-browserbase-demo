@@ -2,7 +2,7 @@
  * relocate.ai — thin demo UI server (no framework, no build step).
  *
  *   GET  /            the one-page relocate.ai app
- *   POST /api/start   kick off the concierge workflow for Jane
+ *   POST /api/start   kick off the concierge workflow for Brandon
  *   GET  /api/state   poll workflow progress (display-safe facts only)
  *   POST /api/approve resume the durably-suspended run { approved: boolean }
  *
@@ -42,11 +42,11 @@ async function startWorkflow(input: { budgetMax: number; query: string }) {
     inputData: {
       userId: 'u_8842',
       applicant: {
-        name: 'Jane Q. Applicant',
+        name: 'Brandon Barros',
         dob: '4/12/1996',
         currentAddress: '88 King St Apt 4, Seattle, WA 98104',
         ssn: '123-45-6789',
-        email: 'jane.applicant@example.com',
+        email: 'brandon.barros@example.com',
         phone: '+1-415-555-0142',
       },
       city: 'sfbay',
