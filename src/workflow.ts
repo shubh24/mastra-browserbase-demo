@@ -23,7 +23,8 @@ import { z } from 'zod';
 import { Vault } from './pii.js';
 import { BrowseSession } from './browse-cli.js';
 import { registerRun, releaseRun, getRunResources } from './tools.js';
-import { findApartmentsAgent, applyToApartmentAgent } from './mastra/agents.js';
+import { applyToApartmentAgent } from './mastra/agents.js';
+import { ensureAgent, runSearchAgent } from './bb-agents.js';
 import { demoState, pushEvent, upsertSession, markSessionDone } from './demo-state.js';
 
 export const APPLICATION_URL =
@@ -103,7 +104,8 @@ interface SiteConfig {
   label: string;
   title: string;
   skillName: string;   // browse.sh catalog slug (for the activity feed)
-  skillLoad: string;   // native Mastra skill name the agent loads
+  skillLoad: string;   // demo-skills folder baked into the BB agent's system prompt
+  agentName: string;   // stable name of the reusable Browserbase Agent
   proxies: boolean;
   verified: boolean;
   url: (input: z.infer<typeof searchLoopState>) => string;
@@ -115,6 +117,7 @@ const SITES: Record<string, SiteConfig> = {
     title: 'Craigslist',
     skillName: 'craigslist.org/search-listings',
     skillLoad: 'craigslist',
+    agentName: 'relocate-craigslist-search',
     proxies: false,
     verified: false,
     url: (i) =>
@@ -126,8 +129,9 @@ const SITES: Record<string, SiteConfig> = {
     title: 'Apartments.com',
     skillName: 'apartments.com/search-rentals',
     skillLoad: 'apartments',
+    agentName: 'relocate-apartments-search',
     // Apartments.com is behind Akamai Bot Manager — the skill mandates
-    // stealth + residential proxies, exactly the Browserbase capability we show
+    // verified browsers + residential proxies, exactly what we pass to the run
     proxies: true,
     verified: true,
     url: (i) => `https://www.apartments.com/san-francisco-ca/1-bedrooms-under-${i.budgetMax}/`,
@@ -143,98 +147,63 @@ function makeSearchStep<Id extends string>(id: Id, site: SiteConfig) {
       demoState.phase = 'finding';
       demoState.attempt = inputData.attempt + 1;
 
-      const run = getRunResources(inputData.runKey);
-      if (!run) throw new Error('run resources missing');
+      // Browserbase Agent: skill baked into its system prompt, runs entirely on
+      // the Browserbase platform. We only drive it over the REST API.
+      pushEvent(site.label, `▶ importing skill: ${site.skillName}`);
+      const agentId = await ensureAgent({
+        name: site.agentName,
+        skill: site.skillLoad,
+        site: site.title,
+      });
+      pushEvent(site.label, `starting Browserbase Agent (${site.agentName})`);
 
-      // open this site's own isolated session on the first loop iteration
-      let session = run.sessions.get(site.label);
-      if (!session) {
-        pushEvent(site.label, `▶ importing skill: ${site.skillName}`);
-        const url = site.url(inputData);
-        pushEvent(site.label, `navigating to ${url}`);
-        try {
-          session = await BrowseSession.openIsolated(
-            `reloc-${inputData.userId}-${site.label}`,
-            url,
-            { proxies: site.proxies, verified: site.verified },
-          );
-        } catch {
-          // verified/advanced-stealth may be plan-gated — fall back gracefully
-          pushEvent(site.label, 'advanced stealth unavailable, retrying with proxies only');
-          session = await BrowseSession.openIsolated(
-            `reloc-${inputData.userId}-${site.label}`,
-            url,
-            { proxies: site.proxies },
-          );
-        }
-        run.sessions.set(site.label, session);
-        session.onAction = (a) => pushEvent(site.label, `${a.cmd} ${a.arg ?? ''}`.trim());
-        upsertSession({
-          label: site.label,
-          title: `${site.title} — search`,
-          sessionId: session.sessionId,
-          liveViewUrl: session.liveViewUrl,
-          sessionUrl: session.sessionUrl,
-          status: 'live',
-        });
-        if (session.liveViewUrl) console.log(`  🔴 ${site.title} live view: ${session.liveViewUrl}`);
-      }
-
-      const requestContext = new RequestContext<{ runKey: string; sessionLabel: string }>();
-      requestContext.set('runKey', inputData.runKey);
-      requestContext.set('sessionLabel', site.label);
-
+      const url = site.url(inputData);
       const feedback = inputData.rejectionReason
-        ? `\n\nYour previous shortlist was REJECTED: ${inputData.rejectionReason}
-           Snapshot again (scroll / read more of the page) and extract a better shortlist.`
+        ? ` A previous attempt was rejected: ${inputData.rejectionReason} Search again and return a better shortlist.`
         : '';
+      const task =
+        `Find rental listings on ${site.title} for "${inputData.query}" in San Francisco, ` +
+        `with a HARD maximum price of $${inputData.budgetMax}/month. ` +
+        `Start from ${url}. Return up to 6 real listings at or under budget, each with its ` +
+        `title, monthly price, and canonical listing URL.${feedback}`;
 
-      const result = await findApartmentsAgent.generate(
-        `The browser is already open on ${site.title}, on the search results page for the customer:
-         looking for "${inputData.query}" in San Francisco, HARD budget $${inputData.budgetMax}/month.
+      // Apartments.com needs verified browsers + residential proxies; Craigslist
+      // does not (its skill uses the public JSON API), so we let the platform default.
+      const browserSettings =
+        site.proxies || site.verified
+          ? { proxies: site.proxies, verified: site.verified }
+          : undefined;
 
-         First, load the imported "${site.skillLoad}" skill with the skill tool and follow its
-         browser workflow, selectors, and site-specific gotchas.
+      const { listings, status } = await runSearchAgent({
+        agentId,
+        task,
+        browserSettings,
+        onSession: (s) => {
+          upsertSession({
+            label: site.label,
+            title: `${site.title} — Browserbase Agent`,
+            sessionId: s.sessionId,
+            liveViewUrl: s.liveViewUrl,
+            sessionUrl: s.sessionUrl,
+            status: 'live',
+          });
+          if (s.liveViewUrl) console.log(`  🔴 ${site.title} agent live view: ${s.liveViewUrl}`);
+        },
+        onMessage: (t) => pushEvent(site.label, `💭 ${t}`),
+      });
 
-         Then extract a shortlist of up to 6 real listings, all at or under budget, using the
-         browser (snapshot / eval / get html) so the work is visible. For EACH listing capture
-         the title, the monthly price, AND the listing's canonical URL (the skill documents how
-         to build/read it).${feedback}`,
-        {
-          requestContext,
-          maxSteps: 25,
-          // per-run, per-site memory thread (persisted; visible in Studio)
-          memory: { thread: `${inputData.runKey}:${site.label}`, resource: inputData.userId },
-          onStepFinish: (step: any) => {
-            const text = String(step?.text ?? '').trim();
-            if (text) pushEvent(site.label, `💭 ${text}`);
-          },
-          structuredOutput: {
-            schema: z.object({
-              listings: z.array(z.object({
-                title: z.string(),
-                price: z.string(),
-                url: z.string().describe('canonical listing URL'),
-              })),
-            }),
-            model: 'anthropic/claude-haiku-4-5',
-          },
-        } as any,
-      );
-
-      const found = (result.object?.listings ?? []).map(
-        (l: { title: string; price: string; url?: string }) => ({
-          title: l.title, price: l.price, url: l.url ?? '', source: site.title,
-        }),
-      );
+      const found = listings.map((l) => ({
+        title: l.title, price: l.price, url: l.url ?? '', source: site.title,
+      }));
 
       // deterministic guardrail — plain code, not a model
-      const valid = found.filter((l: { title: string; price: string; source: string }) => {
+      const valid = found.filter((l) => {
         const price = Number(l.price.replace(/[^0-9.]/g, ''));
         return Number.isFinite(price) && price > 0 && price <= inputData.budgetMax;
       });
 
-      pushEvent(site.label, `✅ extracted ${valid.length} within-budget listings`);
+      pushEvent(site.label, `✅ agent ${status.toLowerCase()} — ${valid.length} within-budget listings`);
+      markSessionDone(site.label);
 
       return { ...inputData, shortlist: valid };
     },
@@ -271,18 +240,7 @@ const mergeShortlists = createStep({
 
     demoState.shortlist = combined;
     pushEvent('workflow', `merged shortlists: ${a.shortlist.length} craigslist + ${b.shortlist.length} apartments.com`);
-
-    if (ok) {
-      // search is done — end both browsers so their session replays are ready
-      const run = getRunResources(a.runKey);
-      for (const label of ['craigslist', 'apartments']) {
-        const s = run?.sessions.get(label);
-        if (s) {
-          await s.close();
-          markSessionDone(label);
-        }
-      }
-    }
+    // each Browserbase Agent run closed its own session and marked its card done.
 
     return {
       ...a,
