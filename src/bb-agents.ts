@@ -150,14 +150,22 @@ async function sessionUrls(sessionId: string): Promise<{ liveViewUrl: string | n
   return { liveViewUrl, sessionUrl: `https://browserbase.com/sessions/${sessionId}` };
 }
 
-/** Extract plain assistant text from an AI-SDK UIMessage. */
-function messageText(msg: any): string {
-  if (!Array.isArray(msg?.parts)) return '';
-  return msg.parts
-    .filter((p: any) => (p?.type === 'text' || p?.type === 'reasoning') && typeof p.text === 'string')
-    .map((p: any) => p.text.trim())
-    .filter(Boolean)
-    .join(' ');
+/**
+ * Extract readable text from a run message. The API returns entries shaped like
+ * `{ message: { role, content: [{ type, text | toolName }] } }` (AI-SDK style).
+ */
+function messageText(message: any): string {
+  const parts = message?.content ?? message?.parts ?? [];
+  if (!Array.isArray(parts)) return '';
+  const out: string[] = [];
+  for (const p of parts) {
+    if ((p?.type === 'text' || p?.type === 'reasoning') && typeof p.text === 'string' && p.text.trim()) {
+      out.push(p.text.trim());
+    } else if (typeof p?.type === 'string' && p.type.includes('tool') && p.toolName) {
+      out.push(`🔧 ${p.toolName}`);
+    }
+  }
+  return out.join(' ');
 }
 
 /**
@@ -209,9 +217,10 @@ export async function runSearchAgent(opts: {
       try {
         const q = since ? `?since=${encodeURIComponent(since)}` : '';
         const data = await bb(`/agents/runs/${runId}/messages${q}`);
-        for (const m of data.messages ?? []) {
-          if (m.role === 'assistant') {
-            const t = messageText(m);
+        for (const entry of data.data ?? data.messages ?? []) {
+          const message = entry.message ?? entry;
+          if (message.role === 'assistant') {
+            const t = messageText(message);
             if (t) onMessage(t);
           }
         }
