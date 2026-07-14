@@ -98,8 +98,8 @@
   .viewtoggle .vt.active { background: #fff; color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
   .brand { display: flex; align-items: center; gap: 10px; }
   .brand-center { position: absolute; left: 50%; transform: translateX(-50%); }
-  .brand .blp { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; font-size: 15px; padding: 6px 14px 6px 6px; border: 1px solid var(--line); border-radius: 999px; background: #fff; }
-  .brand .lgo { width: 24px; height: 24px; border-radius: 6px; display: block; }
+  .brand .blp { display: inline-flex; align-items: center; gap: 9px; font-weight: 700; font-size: 16px; }
+  .brand .lgo { width: 26px; height: 26px; border-radius: 6px; display: block; }
   .brand .bx { color: var(--muted); font-size: 15px; }
 
   /* co-brand lockup inside the customer panel */
@@ -168,11 +168,6 @@
       </div>
       <button id="start">Find &amp; apply for my apartment</button>
 
-      <div class="pick" id="shortlistBox" style="background:#fff; border:1px solid var(--line);">
-        <b>Found across Craigslist + Apartments.com</b>
-        <ul id="shortlist" style="list-style:none; font-size:12.5px; margin-top:6px;"></ul>
-      </div>
-
       <div class="pick" id="pick">
         <b id="pickTitle"></b>
         <span id="pickPrice"></span>
@@ -216,6 +211,11 @@
       The moment they start, you'll watch every one of them live, right here.
     </div>
     <div id="sessions" style="display:none;"></div>
+
+    <div class="pick" id="shortlistBox" style="background:#fff;border:1px solid var(--line);border-radius:14px;padding:20px 22px;margin:0;">
+      <b style="font-size:14px;">Found across Craigslist + Apartments.com</b>
+      <ul id="shortlist" style="list-style:none;font-size:13px;margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:0 28px;"></ul>
+    </div>
   </section>
 </main>
 

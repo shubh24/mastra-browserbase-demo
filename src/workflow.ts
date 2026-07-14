@@ -106,6 +106,8 @@ interface SiteConfig {
   skillName: string;   // browse.sh catalog slug (for the activity feed)
   skillLoad: string;   // demo-skills folder baked into the BB agent's system prompt
   agentName: string;   // stable name of the reusable Browserbase Agent
+  agentExtra?: string; // per-site system-prompt override (e.g. force the browser)
+  taskNote?: string;   // per-site addition to the run task
   proxies: boolean;
   verified: boolean;
   url: (input: z.infer<typeof searchLoopState>) => string;
@@ -118,6 +120,13 @@ const SITES: Record<string, SiteConfig> = {
     skillName: 'craigslist.org/search-listings',
     skillLoad: 'craigslist',
     agentName: 'relocate-craigslist-search',
+    // Photo-quality judgment forces the agent onto the browser (the JSON API
+    // can't SEE images) — so the demo shows a live Craigslist browser session.
+    taskNote:
+      'IMPORTANT: quality of the listing PHOTO matters. You must actually LOOK AT each ' +
+      "listing's primary image and only include listings whose photo looks good and clear — " +
+      'exclude listings with no photo or a blurry/low-quality photo. Open the listings in the ' +
+      'browser and view the images to judge.',
     proxies: false,
     verified: false,
     url: (i) =>
@@ -154,6 +163,7 @@ function makeSearchStep<Id extends string>(id: Id, site: SiteConfig) {
         name: site.agentName,
         skill: site.skillLoad,
         site: site.title,
+        extra: site.agentExtra,
       });
       pushEvent(site.label, `starting Browserbase Agent (${site.agentName})`);
 
@@ -161,11 +171,12 @@ function makeSearchStep<Id extends string>(id: Id, site: SiteConfig) {
       const feedback = inputData.rejectionReason
         ? ` A previous attempt was rejected: ${inputData.rejectionReason} Search again and return a better shortlist.`
         : '';
+      const note = site.taskNote ? ` ${site.taskNote}` : '';
       const task =
         `Find rental listings on ${site.title} for "${inputData.query}" in San Francisco, ` +
         `with a HARD maximum price of $${inputData.budgetMax}/month. ` +
         `Start from ${url}. Return up to 6 real listings at or under budget, each with its ` +
-        `title, monthly price, and canonical listing URL.${feedback}`;
+        `title, monthly price, and canonical listing URL.${note}${feedback}`;
 
       // Apartments.com needs verified browsers + residential proxies; Craigslist
       // does not (its skill uses the public JSON API), so we let the platform default.

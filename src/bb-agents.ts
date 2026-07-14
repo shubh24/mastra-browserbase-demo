@@ -77,23 +77,34 @@ const idCache = new Map<string, string>();
 
 /**
  * Idempotently create (or find, by name) a Browserbase agent with the given
- * skill baked into its system prompt. Returns the agentId. Safe to call every
- * run — it caches in-process and reuses the same agent across runs.
+ * skill baked into its system prompt. When the agent already exists, its prompt
+ * is UPDATED so it stays in sync with the code (edit the prompt here, re-run,
+ * and the platform agent picks it up). `extra` is a per-site override appended
+ * ahead of the skill — e.g. forcing the browser path for the demo.
  */
 export async function ensureAgent(opts: {
   name: string;
   skill: string;   // demo-skills folder name
   site: string;    // human site name for the prompt
+  extra?: string;  // per-site override, appended before the imported skill
 }): Promise<string> {
-  if (idCache.has(opts.name)) return idCache.get(opts.name)!;
-
   const systemPrompt =
     `You are a rental-listings research agent for ${opts.site}.\n` +
     `Use the imported browse.sh skill below as your playbook: follow its workflow, ` +
-    `URL patterns, extraction technique, and site-specific gotchas exactly.\n` +
+    `URL patterns, extraction technique, and site-specific gotchas.\n` +
     `Return only real listings at or under the user's stated maximum monthly price. ` +
-    `Your output must match the result schema: a "listings" array of { title, price, url }.\n\n` +
-    `--- IMPORTED SKILL ---\n${loadSkill(opts.skill)}`;
+    `Your output must match the result schema: a "listings" array of { title, price, url }.` +
+    (opts.extra ? `\n\n${opts.extra}` : '') +
+    `\n\n--- IMPORTED SKILL ---\n${loadSkill(opts.skill)}`;
+
+  const body = JSON.stringify({ name: opts.name, systemPrompt, resultSchema: LISTINGS_SCHEMA });
+
+  // cached this process → keep it in sync, then reuse
+  if (idCache.has(opts.name)) {
+    const id = idCache.get(opts.name)!;
+    await bb(`/agents/${id}`, { method: 'POST', body }).catch(() => {});
+    return id;
+  }
 
   // find an existing agent by name (list is cursor-paginated; array under `data`)
   let cursor: string | undefined;
@@ -104,6 +115,7 @@ export async function ensureAgent(opts: {
     const found = list.find((a) => a.name === opts.name);
     if (found?.agentId) {
       idCache.set(opts.name, found.agentId);
+      await bb(`/agents/${found.agentId}`, { method: 'POST', body }).catch(() => {}); // sync prompt
       return found.agentId;
     }
     cursor = page$.nextCursor;
@@ -111,10 +123,7 @@ export async function ensureAgent(opts: {
   }
 
   // not found → create it
-  const created = await bb('/agents', {
-    method: 'POST',
-    body: JSON.stringify({ name: opts.name, systemPrompt, resultSchema: LISTINGS_SCHEMA }),
-  });
+  const created = await bb('/agents', { method: 'POST', body });
   idCache.set(opts.name, created.agentId);
   return created.agentId;
 }
